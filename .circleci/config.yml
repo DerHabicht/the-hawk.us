@@ -1,0 +1,57 @@
+version: 2.1
+orbs:
+  aws-s3: circleci/aws-s3@1.0.16
+jobs:
+  build:
+    working_directory: ~/repo
+    docker:
+      - image: circleci/node:10.16.3
+    steps:
+      - checkout
+      - run:
+          name: 'Pull submodules'
+          command: |
+            git submodule init
+            git submodule update --remote
+      - restore_cache:
+          key: dependency-cache-{{ checksum "yarn.lock" }}
+      - run:
+          name: install-packages
+          command: yarn install
+      - save_cache:
+          key: dependency-cache-{{ checksum "yarn.lock" }}
+          paths:
+            - ./node_modules
+      - run:
+          name: build-project
+          command: 'yarn run build'
+      - run:
+          name: generate-static-pages
+          command: 'yarn run export'
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - dist
+  deploy:
+    working_directory: ~/repo
+    docker:
+      - image: circleci/node:10.16.3
+    steps:
+      - attach_workspace:
+          at: ./
+      - aws-s3/sync:
+          from: dist
+          to: 's3://thehawk-landing.the-hawk.us/'
+          overwrite: true
+
+workflows:
+  version: 2.1
+  build-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
