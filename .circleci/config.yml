@@ -41,7 +41,7 @@ jobs:
           at: ./
       - aws-s3/sync:
           from: dist
-          to: 's3://thehawk-landing.the-hawk.us/'
+          to: 's3://the-hawk-landing.the-hawk.us/'
           overwrite: true
 
 workflows:
